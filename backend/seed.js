@@ -1,9 +1,19 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import path from 'path';
-import MenuItem from './models/MenuItem';
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const path = require('path');
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, './.env') });
+
+const MenuItemSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true },
+    category: { type: String, required: true },
+    image: { type: String },
+    foodType: { type: String, enum: ['Veg', 'Non-Veg', 'Both'], default: 'Veg' }
+});
+
+const MenuItem = mongoose.models.MenuItem || mongoose.model('MenuItem', MenuItemSchema);
 
 const menuItems = [
     {
@@ -56,11 +66,9 @@ const seedDB = async () => {
         await mongoose.connect(mongoUri);
         console.log("Connected to MongoDB for seeding...");
 
-        // Clear existing
         await MenuItem.deleteMany({});
         console.log("Cleared existing menu items.");
 
-        // Insert new
         await MenuItem.insertMany(menuItems);
         console.log("Successfully seeded premium menu items.");
 

@@ -1,37 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import Head from "next/head";
+import Link from "next/link";
 import Image from "next/image";
-import { Phone, MapPin, Users, Clock, ShoppingBag, Send } from "lucide-react";
+import {
+  Utensils,
+  MapPin,
+  Clock,
+  CheckCircle,
+  ChevronRight,
+  Smartphone,
+  Instagram,
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Menu as MenuIcon,
+  X,
+  Star,
+  Quote
+} from "lucide-react";
 
-// Lucide icons need to be imported or handled if not using lucide-react, 
-// for simplicity here I'll use SVGs or standard elements if lucide isn't available.
-// Assuming lucide-react is installed since it's common in Next.js projects.
-// If not, I'll fallback to SVG.
-
-type MenuItem = {
+interface MenuItem {
   _id: string;
   name: string;
   description: string;
-  category: string;
   price: number;
+  category: string;
   image: string;
-  foodType: "Veg" | "Non-Veg";
-};
+  foodType: "Veg" | "Non-Veg" | "Both";
+}
 
-export default function Home() {
+export default function LandingPage() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState({
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    numberOfPeople: 5,
-    eventDate: "",
-    eventAddress: "",
-    foodType: "Veg" as const,
-    dishIds: [] as string[],
-    specialInstructions: "",
+    address: "",
+    items: "",
   });
+
+  const WHATSAPP_NUMBER = "+919010123973";
 
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -39,318 +51,373 @@ export default function Home() {
       .then((res) => res.json())
       .then((data) => {
         setMenu(data.items || []);
-        setLoading(false);
       })
-      .catch((err) => {
-        console.error("Failed to fetch menu:", err);
-        setLoading(false);
-      });
+      .catch((err) => console.error("Error fetching menu:", err));
   }, []);
+
+  const categories = ["All", ...Array.from(new Set(menu.map((item) => item.category)))];
+  const filteredMenu = activeCategory === "All" ? menu : menu.filter((i) => i.category === activeCategory);
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setBookingStatus("loading");
 
-    // Generate WhatsApp Message
-    const dishNames = menu
-      .filter((m) => booking.dishIds.includes(m._id))
-      .map((m) => m.name)
-      .join(", ");
+    const message = `*Srinu Lunch Basket - New Order*\n\n*Name:* ${formData.name}\n*Phone:* ${formData.phone}\n*Address:* ${formData.address}\n*Items:* ${formData.items}\n\n_Please confirm our order._`;
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}?text=${encodeURIComponent(message)}`;
 
-    const message = `*New Lunch Booking Request*\n\n` +
-      `*Name:* ${booking.name}\n` +
-      `*Phone:* ${booking.phone}\n` +
-      `*People:* ${booking.numberOfPeople}\n` +
-      `*Date:* ${booking.eventDate}\n` +
-      `*Address:* ${booking.eventAddress}\n` +
-      `*Food Type:* ${booking.foodType}\n` +
-      `*Dishes:* ${dishNames}\n` +
-      `*Note:* ${booking.specialInstructions}`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/91XXXXXXXXXX?text=${encodedMessage}`; // Replace with actual phone
-
+    // Open WhatsApp
     window.open(whatsappUrl, "_blank");
 
-    // Also save to backend if needed
+    // Also save to backend
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
     fetch(`${apiUrl}/api/bookings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...booking,
-        email: "placeholder@example.com", // Backend requires email in schema
-        eventDate: new Date(booking.eventDate).toISOString(),
+        customerName: formData.name,
+        phoneNumber: formData.phone,
+        deliveryAddress: formData.address,
+        orderItems: [{ name: formData.items, quantity: 1, foodType: "Veg" }],
       }),
-    })
-      .then(res => res.json())
-      .then(data => console.log("Booking saved:", data))
-      .catch(err => console.error("Error saving booking:", err));
-  };
-
-  const toggleDish = (id: string) => {
-    setBooking((prev) => ({
-      ...prev,
-      dishIds: prev.dishIds.includes(id)
-        ? prev.dishIds.filter((dishId) => dishId !== id)
-        : [...prev.dishIds, id],
-    }));
+    }).finally(() => {
+      setBookingStatus("success");
+      setTimeout(() => setBookingStatus("idle"), 3000);
+    });
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="bg-[#0F1115] text-[#F8F9FA] selection:bg-[#D4AF37] selection:text-black">
+
       {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full glass">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="size-10 rounded-full bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold">S</div>
-            <span className="text-xl font-bold tracking-tight">Srinu Lunch Basket</span>
+      <nav className="fixed w-full z-50 glass-premium border-b border-white/5 top-0 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="relative w-12 h-12 overflow-hidden rounded-full border border-[#D4AF37]/30">
+              <Image
+                src="/images/logo.png"
+                alt="Srinu Lunch Basket"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform"
+              />
+            </div>
+            <span className="text-2xl font-bold text-gradient-gold">Srinu Lunch Basket</span>
+          </Link>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-10 font-medium text-sm tracking-wide">
+            <a href="#menu" className="hover:text-[#D4AF37] transition-colors">OUR MENU</a>
+            <a href="#about" className="hover:text-[#D4AF37] transition-colors">PHILOSOPHY</a>
+            <a href="#booking" className="hover:text-[#D4AF37] transition-colors">ORDER NOW</a>
+            <Link href="/help-center" className="bg-white/5 px-4 py-2 rounded-full hover:bg-white/10 transition-colors">SUPPORT</Link>
           </div>
-          <div className="hidden space-x-8 md:flex font-medium">
-            <a href="#menu" className="transition-colors hover:text-primary">Menu</a>
-            <a href="#order" className="transition-colors hover:text-primary">Order Now</a>
-            <a href="#contact" className="transition-colors hover:text-primary">Contact</a>
-          </div>
-          <a href="#order" className="rounded-full bg-primary px-6 py-2 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-transform active:scale-95">
-            Book Now
-          </a>
+
+          <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X /> : <MenuIcon />}
+          </button>
         </div>
       </nav>
 
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-[#0F1115] pt-24 px-8 animate-fade-in md:hidden">
+          <div className="flex flex-col gap-8 text-2xl font-bold">
+            <a href="#menu" onClick={() => setMobileMenuOpen(false)}>Menu</a>
+            <a href="#about" onClick={() => setMobileMenuOpen(false)}>Our Story</a>
+            <a href="#booking" onClick={() => setMobileMenuOpen(false)}>Order Now</a>
+            <Link href="/help-center" onClick={() => setMobileMenuOpen(false)}>Help Center</Link>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
-      <header className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute top-0 right-0 -z-10 h-full w-1/3 bg-primary/5 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
-        <div className="mx-auto max-w-7xl px-6 lg:flex lg:items-center lg:gap-12">
-          <div className="lg:w-1/2">
-            <h1 className="text-5xl font-extrabold leading-tight tracking-tight md:text-6xl mb-6">
-              Homemade <span className="gradient-text">Deliciousness</span> <br />
-              Delivered To Your Door
+      <header className="relative min-h-screen flex items-center pt-20 px-6 overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-[#D4AF37]/5 blur-[120px] rounded-full -mr-40 mt-20" />
+        <div className="absolute bottom-0 left-0 w-1/3 h-1/2 bg-blue-500/5 blur-[100px] rounded-full -ml-20 mb-20" />
+
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center relative z-10">
+          <div className="animate-fade-in [animation-delay:200ms]">
+            <div className="inline-flex items-center gap-2 bg-[#D4AF37]/10 text-[#D4AF37] px-4 py-2 rounded-full text-xs font-bold mb-8 border border-[#D4AF37]/20 uppercase tracking-[0.2em]">
+              <Star className="w-3 h-3 fill-[#D4AF37]" /> The Gold Standard of Home Dining
+            </div>
+            <h1 className="text-6xl md:text-8xl font-bold leading-tight mb-8">
+              Lunch <br />
+              <span className="text-gradient-gold">Redefined.</span>
             </h1>
-            <p className="mb-8 text-lg text-foreground/70 max-w-lg leading-relaxed">
-              Experience the authentic taste of home-cooked luxury. Srinu Lunch Basket brings you curated menus, fresh ingredients, and love in every bite.
+            <p className="text-[#ADB5BD] text-xl mb-12 max-w-lg leading-relaxed">
+              Authentic flavors, premium ingredients, and the warmth of home. Delivered with precision to your doorstep.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <a href="#menu" className="flex items-center justify-center gap-2 rounded-xl bg-foreground px-8 py-4 text-background font-bold transition-all hover:bg-foreground/90">
-                Explore Menu
+            <div className="flex flex-col sm:flex-row gap-6">
+              <a href="#menu" className="bg-[#D4AF37] text-black px-10 py-5 rounded-full font-bold text-center hover:scale-105 transition-all shadow-[0_10px_30px_rgba(212,175,55,0.3)]">
+                Explore the Collection
               </a>
-              <div className="flex items-center gap-4 px-4">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="size-10 rounded-full border-2 border-background bg-zinc-200 overflow-hidden">
-                      <Image src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="user" width={40} height={40} />
-                    </div>
-                  ))}
-                </div>
-                <div className="text-sm">
-                  <p className="font-bold">500+ Happy Clients</p>
-                  <p className="text-foreground/60">Across the city</p>
-                </div>
-              </div>
+              <a href="#booking" className="border border-white/20 hover:border-[#D4AF37] px-10 py-5 rounded-full font-bold text-center transition-all bg-white/5 backdrop-blur-sm">
+                Reserve your Box
+              </a>
             </div>
           </div>
-          <div className="mt-16 lg:mt-0 lg:w-1/2 relative">
-            <div className="relative aspect-square w-full max-w-lg mx-auto overflow-hidden rounded-3xl shadow-2xl rotate-3 group transition-transform hover:rotate-0">
+
+          <div className="relative aspect-square animate-fade-in [animation-delay:400ms] hidden lg:block">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0F1115] via-transparent to-transparent z-10" />
+            <div className="relative h-full w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
               <Image
-                src="https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=1000"
-                alt="Delicious Lunch Thali"
+                src="/images/menu/veg-thali.png"
+                alt="Premium Thali"
                 fill
-                className="object-cover transition-transform group-hover:scale-105"
+                className="object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-              <div className="absolute bottom-6 left-6 right-6 p-4 glass rounded-2xl text-foreground">
-                <p className="font-bold">✨ Today's Special</p>
-                <p className="text-sm opacity-80">Full Authentic Veg Thali - Ready at 12 PM</p>
+            </div>
+            <div className="absolute -bottom-8 -left-8 glass-premium p-8 rounded-3xl border-[#D4AF37]/30 max-w-sm animate-fade-in [animation-delay:600ms] z-20">
+              <Quote className="w-8 h-8 text-[#D4AF37] mb-4 opacity-50" />
+              <p className="italic text-lg text-white mb-4">"Hands down the best lunch I've ever had delivered. It feels like a boutique dining experience at my desk."</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500" />
+                <div>
+                  <div className="font-bold text-sm">Arjun Sharma</div>
+                  <div className="text-[10px] text-[#ADB5BD] uppercase tracking-widest leading-none">Food Critic</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Stats/Features */}
-      <section className="bg-white dark:bg-black/20 py-16 border-y border-border">
-        <div className="mx-auto max-w-7xl px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+      {/* Floating Indicators */}
+      <section className="py-12 glass-premium border-y border-white/5 relative z-20">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
-            { label: "Fresh Ingredients", icon: "🌱" },
-            { label: "Express Delivery", icon: "🚀" },
-            { label: "Eco-Friendly", icon: "📦" },
-            { label: "Quality Taste", icon: "⭐" },
-          ].map((item, idx) => (
-            <div key={idx} className="text-center">
-              <div className="text-3xl mb-2">{item.icon}</div>
-              <p className="font-bold">{item.label}</p>
+            { label: "Handcrafted Recipes", val: "50+", icon: Utensils },
+            { label: "City-wide Reach", val: "100%", icon: MapPin },
+            { label: "On-time Delivery", val: "99.9%", icon: Clock },
+            { label: "Loyal Customers", val: "1k+", icon: CheckCircle },
+          ].map((item, i) => (
+            <div key={i} className="text-center group">
+              <item.icon className="w-6 h-6 mx-auto mb-4 text-[#D4AF37] group-hover:scale-125 transition-transform" />
+              <div className="text-3xl font-bold text-white mb-1">{item.val}</div>
+              <div className="text-[10px] text-[#ADB5BD] uppercase tracking-widest">{item.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Menu Section */}
-      <section id="menu" className="py-24">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="mb-16 text-center">
-            <h2 className="text-3xl font-bold mb-4">Our Curated Menu</h2>
-            <p className="text-foreground/60">Hand-picked dishes prepared with traditional recipes</p>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[1, 2, 3].map(i => <div key={i} className="h-80 rounded-3xl bg-zinc-100 dark:bg-zinc-800 animate-pulse"></div>)}
+      <section id="menu" className="py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-20">
+            <div className="max-w-xl animate-fade-in">
+              <h2 className="text-5xl font-bold mb-6">Today's <span className="text-gradient-gold">Selections</span></h2>
+              <p className="text-[#ADB5BD] text-lg leading-relaxed">Curated dishes prepared daily with fresh seasonal ingredients. Choose your experience.</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {menu.map((item) => (
-                <div
-                  key={item._id}
-                  className={`group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card p-4 transition-all hover:shadow-xl hover:-translate-y-1 ${booking.dishIds.includes(item._id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}
-                  onClick={() => toggleDish(item._id)}
+            <div className="flex flex-wrap gap-4 animate-fade-in">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-8 py-3 rounded-full text-xs font-bold tracking-[0.1em] uppercase transition-all ${activeCategory === cat
+                      ? "bg-[#D4AF37] text-black shadow-lg"
+                      : "bg-white/5 text-[#ADB5BD] hover:bg-white/10"
+                    }`}
                 >
-                  <div className="relative mb-4 aspect-video overflow-hidden rounded-2xl">
-                    <Image src={item.image} alt={item.name} fill className="object-cover transition-transform group-hover:scale-110" />
-                    <div className="absolute top-2 left-2 rounded-full bg-white/90 dark:bg-black/80 px-3 py-1 text-xs font-bold flex items-center gap-1">
-                      <span className={item.foodType === 'Veg' ? 'text-green-600' : 'text-red-600'}>●</span> {item.foodType}
-                    </div>
-                    <div className="absolute bottom-2 right-2 rounded-full bg-primary px-3 py-1 text-sm font-bold text-white">
-                      ₹{item.price}
-                    </div>
-                  </div>
-                  <h3 className="mb-2 text-xl font-bold">{item.name}</h3>
-                  <p className="mb-4 text-sm text-foreground/60 line-clamp-2">{item.description}</p>
-                  <button className={`mt-auto w-full rounded-xl py-2 font-bold transition-colors ${booking.dishIds.includes(item._id) ? 'bg-primary text-white' : 'bg-secondary border border-border hover:bg-primary hover:text-white'}`}>
-                    {booking.dishIds.includes(item._id) ? 'Selected' : 'Add to Order'}
-                  </button>
-                </div>
+                  {cat}
+                </button>
               ))}
             </div>
-          )}
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-10">
+            {filteredMenu.map((item, i) => (
+              <div key={item._id} className="group animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
+                <div className="glass-premium rounded-[2.5rem] overflow-hidden hover-gold-glow transition-all duration-500">
+                  <div className="relative h-80 overflow-hidden">
+                    <Image
+                      src={item.image || "/images/placeholder.jpg"}
+                      alt={item.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute top-6 right-6 glass-premium px-4 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase border-white/10">
+                      {item.foodType}
+                    </div>
+                  </div>
+                  <div className="p-10">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-2xl font-bold group-hover:text-[#D4AF37] transition-colors">{item.name}</h3>
+                      <span className="text-xl font-bold text-[#D4AF37]">₹{item.price}</span>
+                    </div>
+                    <p className="text-[#ADB5BD] text-sm leading-relaxed mb-10 line-clamp-2 italic">“{item.description}”</p>
+                    <button
+                      onClick={() => {
+                        setFormData({ ...formData, items: item.name });
+                        document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="w-full bg-white/5 group-hover:bg-[#D4AF37] group-hover:text-black py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      Experience This <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Booking Section */}
-      <section id="order" className="py-24 bg-primary/5">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="rounded-[2.5rem] bg-card p-10 shadow-2xl shadow-primary/10 border border-primary/10">
-            <div className="mb-10 text-center">
-              <h2 className="text-3xl font-bold mb-2">Place Your Order</h2>
-              <p className="text-foreground/60 italic">Orders confirmed instantly via WhatsApp</p>
+      {/* Booking Form */}
+      <section id="booking" className="py-32 px-6 bg-gradient-to-b from-transparent to-[#0a0a0c]">
+        <div className="max-w-7xl mx-auto">
+          <div className="glass-premium rounded-[3rem] p-12 md:p-24 grid lg:grid-cols-2 gap-20 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
+
+            <div className="relative z-10 animate-fade-in">
+              <h2 className="text-5xl font-bold mb-8 leading-tight">Secure Your <br /><span className="text-gradient-gold">Luxury Meal.</span></h2>
+              <p className="text-[#ADB5BD] text-lg mb-12 leading-relaxed">
+                Confirm your order via our secure WhatsApp bridge. A personal concierge will handle your delivery details immediately.
+              </p>
+
+              <div className="space-y-8">
+                {[
+                  { label: "Premium Packaging", desc: "Eco-friendly insulated containers and high-end cutlery." },
+                  { label: "Real-time Tracking", desc: "Instant updates via WhatsApp from kitchen to doorstep." },
+                  { label: "Fresh Guarantee", desc: "Meals prepared just minutes before delivery." }
+                ].map((f, i) => (
+                  <div key={i} className="flex gap-6">
+                    <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/10 flex-shrink-0 flex items-center justify-center border border-[#D4AF37]/20">
+                      <CheckCircle className="w-6 h-6 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-white mb-1">{f.label}</div>
+                      <div className="text-sm text-[#ADB5BD]">{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <label className="text-sm font-bold flex items-center gap-2 px-1"><Users className="size-4 text-primary" /> Full Name</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Srinu"
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50"
-                  value={booking.name}
-                  onChange={(e) => setBooking({ ...booking, name: e.target.value })}
-                />
+            <form onSubmit={handleBookingSubmit} className="space-y-6 relative z-10 animate-fade-in [animation-delay:200ms]">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest pl-2">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter your name"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:outline-none focus:border-[#D4AF37] transition-all text-sm"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest pl-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +91 999 999 9999"
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:outline-none focus:border-[#D4AF37] transition-all text-sm"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-bold flex items-center gap-2 px-1"><Phone className="size-4 text-primary" /> Phone Number</label>
-                <input
-                  required
-                  type="tel"
-                  placeholder="+91 00000 00000"
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50"
-                  value={booking.phone}
-                  onChange={(e) => setBooking({ ...booking, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-bold flex items-center gap-2 px-1"><Clock className="size-4 text-primary" /> Number of People</label>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50"
-                  value={booking.numberOfPeople}
-                  onChange={(e) => setBooking({ ...booking, numberOfPeople: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-bold flex items-center gap-2 px-1"><Clock className="size-4 text-primary" /> Event Date & Time</label>
-                <input
-                  required
-                  type="datetime-local"
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50"
-                  value={booking.eventDate}
-                  onChange={(e) => setBooking({ ...booking, eventDate: e.target.value })}
-                />
-              </div>
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-sm font-bold flex items-center gap-2 px-1"><MapPin className="size-4 text-primary" /> Delivery Address</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest pl-2">Delivery Address</label>
                 <textarea
+                  placeholder="Enter full address and landmark"
                   required
                   rows={3}
-                  placeholder="123 Street, Area, City"
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                  value={booking.eventAddress}
-                  onChange={(e) => setBooking({ ...booking, eventAddress: e.target.value })}
-                />
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:outline-none focus:border-[#D4AF37] transition-all text-sm resize-none"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                ></textarea>
               </div>
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-sm font-bold px-1">Special Instructions (Optional)</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest pl-2">Special Notes / Items</label>
                 <input
                   type="text"
-                  placeholder="Less spicy, extra curd, etc."
-                  className="w-full rounded-2xl border border-border bg-background p-4 outline-none focus:ring-2 focus:ring-primary/50"
-                  value={booking.specialInstructions}
-                  onChange={(e) => setBooking({ ...booking, specialInstructions: e.target.value })}
+                  placeholder="Specify items or spice levels"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 focus:outline-none focus:border-[#D4AF37] transition-all text-sm"
+                  value={formData.items}
+                  onChange={(e) => setFormData({ ...formData, items: e.target.value })}
                 />
               </div>
-
               <button
                 type="submit"
-                disabled={booking.dishIds.length === 0}
-                className="md:col-span-2 mt-4 w-full rounded-2xl bg-primary py-5 text-xl font-bold text-white shadow-xl shadow-primary/20 transition-all hover:shadow-2xl hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 disabled:grayscale cursor-pointer"
+                disabled={bookingStatus === "loading"}
+                className={`w-full py-6 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all ${bookingStatus === "success"
+                    ? "bg-green-500 text-white"
+                    : "bg-white text-black hover:bg-[#D4AF37]"
+                  }`}
               >
-                Confirm via WhatsApp <Send className="inline-block ml-2 size-6" />
+                {bookingStatus === "loading" ? "Initializing..." : bookingStatus === "success" ? <>Order Placed <CheckCircle /></> : <>Confirm via WhatsApp <MessageCircle className="w-5 h-5" /></>}
               </button>
-              {booking.dishIds.length === 0 && <p className="md:col-span-2 text-center text-sm text-red-500 font-medium">Please select at least one item from the menu above</p>}
             </form>
           </div>
         </div>
       </section>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/91XXXXXXXXXX"
-        target="_blank"
-        className="fixed bottom-8 right-8 z-[100] flex size-16 items-center justify-center rounded-full bg-green-500 text-white shadow-2xl shadow-green-500/30 transition-transform hover:scale-110 active:scale-90"
-      >
-        <Phone className="size-8" />
-        <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold ring-2 ring-white">1</span>
-      </a>
-
       {/* Footer */}
-      <footer id="contact" className="py-20 bg-foreground text-background">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-            <div>
-              <h3 className="text-2xl font-bold mb-4 italic">Srinu Lunch Basket</h3>
-              <p className="text-background/60 leading-relaxed">Crafting taste, delivering happiness. Your daily dose of home-cooked luxury.</p>
+      <footer className="pt-32 pb-12 px-6 border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-16 mb-24">
+            <div className="col-span-2">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="relative w-10 h-10 overflow-hidden rounded-full border border-[#D4AF37]/30">
+                  <Image src="/images/logo.png" alt="Logo" fill />
+                </div>
+                <span className="text-2xl font-bold text-gradient-gold">Srinu Lunch Basket</span>
+              </div>
+              <p className="text-[#ADB5BD] max-w-sm text-lg leading-relaxed mb-10">
+                Elevating home-style Indian cuisine into a premium daily dining experience.
+              </p>
+              <div className="flex gap-6">
+                <Instagram className="w-5 h-5 text-[#ADB5BD] hover:text-[#D4AF37] cursor-pointer" />
+                <Facebook className="w-5 h-5 text-[#ADB5BD] hover:text-[#D4AF37] cursor-pointer" />
+                <Twitter className="w-5 h-5 text-[#ADB5BD] hover:text-[#D4AF37] cursor-pointer" />
+              </div>
             </div>
+
             <div>
-              <h4 className="font-bold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-background/60">
-                <li><a href="#" className="hover:text-primary transition-colors">Home</a></li>
-                <li><a href="#menu" className="hover:text-primary transition-colors">Our Menu</a></li>
-                <li><a href="#order" className="hover:text-primary transition-colors">Order Now</a></li>
+              <h4 className="text-sm font-bold text-white mb-8 tracking-widest uppercase">Concierge</h4>
+              <ul className="space-y-4 text-sm text-[#ADB5BD]">
+                <li><Link href="/help-center" className="hover:text-[#D4AF37]">Help Center</Link></li>
+                <li><a href="#menu" className="hover:text-[#D4AF37]">Menu Guide</a></li>
+                <li><a href="#about" className="hover:text-[#D4AF37]">Quality Standards</a></li>
+                <li><Link href="/help-center" className="hover:text-[#D4AF37]">Contact Support</Link></li>
               </ul>
             </div>
+
             <div>
-              <h4 className="font-bold mb-4">Support</h4>
-              <ul className="space-y-2 text-background/60">
-                <li>Help Center</li>
-                <li>Terms of Service</li>
-                <li>Privacy Policy</li>
+              <h4 className="text-sm font-bold text-white mb-8 tracking-widest uppercase">Legal</h4>
+              <ul className="space-y-4 text-sm text-[#ADB5BD]">
+                <li><Link href="/privacy" className="hover:text-[#D4AF37]">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-[#D4AF37]">Terms of Service</Link></li>
+                <li><a href="#" className="hover:text-[#D4AF37]">Cookies</a></li>
+                <li><a href="#" className="hover:text-[#D4AF37]">Cancellation Policy</a></li>
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-background/10 text-center text-background/40 text-sm">
-            © {new Date().getFullYear()} Srinu Lunch Basket. All rights reserved. Built with ❤️ for Srinu.
+
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 text-[10px] text-[#555] font-bold tracking-[0.3em] uppercase">
+            <div>© 2026 Srinu Lunch Basket. All Individual Rights Reserved.</div>
+            <div className="flex gap-10">
+              <span className="flex items-center gap-2"><Smartphone className="w-3 h-3" /> +91 90101 23973</span>
+              <span className="flex items-center gap-2"><MapPin className="w-3 h-3" /> Hyderabad, India</span>
+            </div>
           </div>
         </div>
       </footer>
+
+      {/* Floating CTA */}
+      <a
+        href={`https://wa.me/${WHATSAPP_NUMBER.replace('+', '')}`}
+        target="_blank"
+        className="fixed bottom-10 right-10 bg-[#25D366] text-white p-5 rounded-full shadow-2xl hover:scale-110 transition-transform z-50 group border-4 border-[#0F1115]"
+      >
+        <MessageCircle className="w-8 h-8 group-hover:rotate-12 transition-transform" />
+        <span className="absolute right-full mr-4 bg-white text-black px-4 py-2 rounded-xl text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl">
+          Order via WhatsApp
+        </span>
+      </a>
+
     </div>
   );
 }
