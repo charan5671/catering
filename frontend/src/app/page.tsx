@@ -34,7 +34,8 @@ export default function Home() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/menu")
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    fetch(`${apiUrl}/api/menu`)
       .then((res) => res.json())
       .then((data) => {
         setMenu(data.items || []);
@@ -71,7 +72,8 @@ export default function Home() {
     window.open(whatsappUrl, "_blank");
 
     // Also save to backend if needed
-    fetch("http://localhost:5000/api/bookings", {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    fetch(`${apiUrl}/api/bookings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
