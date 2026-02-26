@@ -12,6 +12,7 @@ import { authRouter } from "./routes/authRoutes";
 import { menuRouter } from "./routes/menuRoutes";
 import { bookingRouter } from "./routes/bookingRoutes";
 import { adminRouter } from "./routes/adminRoutes";
+import reviewRouter from "./routes/reviewRoutes";
 import { errorMiddleware, notFound } from "./middlewares/errorMiddleware";
 
 export function createApp() {
@@ -49,6 +50,7 @@ export function createApp() {
   app.use("/api/menu", menuRouter);
   app.use("/api/bookings", bookingRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/reviews", reviewRouter);
 
   app.use(notFound);
   app.use(errorMiddleware);
